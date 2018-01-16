@@ -7,6 +7,9 @@
  */
 
 #import "RCTPdfPageView.h"
+#import "PdfManager.h"
+#import "PDFScrollView.h"
+#import "TiledPDFView.h"
 
 #import <Foundation/Foundation.h>
 #import <QuartzCore/QuartzCore.h>
@@ -44,49 +47,72 @@
     self = [super init];
     if (self) {
         
-        self.backgroundColor = UIColor.blueColor;
-        self.maximumZoomScale = 4.0;
-        self.minimumZoomScale = 1.0;
-        self.contentMode = UIViewContentModeScaleAspectFit;
-        self.bounces = YES;
-        self.bouncesZoom = YES;
-        self.showsHorizontalScrollIndicator = YES;
-        self.showsVerticalScrollIndicator = YES;
-        self.pdfPage = [[PdfPage alloc] initWithFrame:self.bounds];
-        self.pdfPage.backgroundColor = UIColor.clearColor;
-        [self addSubview:self.pdfPage];
+        self.pdfScrollView = [[PDFScrollView alloc] init];
+        [self addSubview:self.pdfScrollView];
+//        self.pdfPage = [[PdfPage alloc] initWithFrame:self.bounds];
+//        self.pdfPage.backgroundColor = UIColor.clearColor;
+//        [self addSubview:self.pdfPage];
     }
     
     return self;
 }
 
-- (void)didSetProps:(NSArray<NSString *> *)changedProps
-{
-    long int count = [changedProps count];
-    for (int i = 0 ; i < count; i++) {
-        
-        if ([[changedProps objectAtIndex:i] isEqualToString:@"page"]) {
-            [self setNeedsDisplay];
-        }
+//- (void)didSetProps:(NSArray<NSString *> *)changedProps
+//{
+//    long int count = [changedProps count];
+//    for (int i = 0 ; i < count; i++) {
+//
+//        if ([[changedProps objectAtIndex:i] isEqualToString:@"page"]) {
+//            [self setNeedsDisplay];
+//        }
+//
+//    }
+//    [self setNeedsDisplay];
+//}
 
-    }
-    [self setNeedsDisplay];
+-(void)layoutSubviews {
+    [super layoutSubviews];
+    [self restoreScale];
 }
-
 
 - (void)reactSetFrame:(CGRect)frame
 {
     [super reactSetFrame:frame];
-    self.pdfPage.frame = frame;
-    self.contentSize = frame.size;
+    self.pdfScrollView.frame = frame;
 }
 
 -(void)setPage:(int)page {
-    self.pdfPage.page = page;
+    _page = page;
+    [self loadPdfPage];
 }
 
 -(void)setFileNo:(int)fileNo {
-    self.pdfPage.fileNo = fileNo;
+    _fileNo = fileNo;
+    [self loadPdfPage];
+}
+
+-(void)loadPdfPage {
+    CGPDFDocumentRef pdfRef = [PdfManager getPdf: self.fileNo];
+    NSLog(@"%@", pdfRef);
+    self.pdfPage = CGPDFDocumentGetPage(pdfRef, self.page);
+    if (self.pdfPage != nil) {
+        [self.pdfScrollView setPDFPage:self.pdfPage];
+    }
+}
+
+-(void)restoreScale {
+    if (self.pdfPage == NULL) return;
+    CGRect pageRect = CGPDFPageGetBoxRect( self.pdfPage, kCGPDFMediaBox );
+    CGFloat yScale = self.frame.size.height/pageRect.size.height;
+    CGFloat xScale = self.frame.size.width/pageRect.size.width;
+    self.myScale = MIN( xScale, yScale );
+    NSLog(@"%s self.myScale=%f",__PRETTY_FUNCTION__, self.myScale);
+    self.pdfScrollView.bounds = self.bounds;
+    self.pdfScrollView.zoomScale = 1.0;
+    self.pdfScrollView.PDFScale = self.myScale;
+    self.pdfScrollView.tiledPDFView.bounds = self.bounds;
+    self.pdfScrollView.tiledPDFView.myScale = self.myScale;
+    [self.pdfScrollView.tiledPDFView.layer setNeedsDisplay];
 }
 
 @end
