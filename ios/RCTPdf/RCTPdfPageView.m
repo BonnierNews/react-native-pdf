@@ -6,10 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#import "PdfManager.h"
 #import "RCTPdfPageView.h"
-
-
 
 #import <Foundation/Foundation.h>
 #import <QuartzCore/QuartzCore.h>
@@ -36,9 +33,10 @@
 // output log both debug and release
 #define RLog( s, ... ) NSLog( @"<%p %@:(%d)> %@", self, [[NSString stringWithUTF8String:__FILE__] lastPathComponent], __LINE__, [NSString stringWithFormat:(s), ##__VA_ARGS__] )
 
-@implementation RCTPdfPageView {
+@interface RCTPdfPageView ()
+@end
 
-   
+@implementation RCTPdfPageView {
 }
 
 - (instancetype)init
@@ -46,8 +44,17 @@
     self = [super init];
     if (self) {
         
-        self.backgroundColor = UIColor.whiteColor;
-        
+        self.backgroundColor = UIColor.blueColor;
+        self.maximumZoomScale = 4.0;
+        self.minimumZoomScale = 1.0;
+        self.contentMode = UIViewContentModeScaleAspectFit;
+        self.bounces = YES;
+        self.bouncesZoom = YES;
+        self.showsHorizontalScrollIndicator = YES;
+        self.showsVerticalScrollIndicator = YES;
+        self.pdfPage = [[PdfPage alloc] initWithFrame:self.bounds];
+        self.pdfPage.backgroundColor = UIColor.clearColor;
+        [self addSubview:self.pdfPage];
     }
     
     return self;
@@ -63,7 +70,6 @@
         }
 
     }
-    
     [self setNeedsDisplay];
 }
 
@@ -71,44 +77,16 @@
 - (void)reactSetFrame:(CGRect)frame
 {
     [super reactSetFrame:frame];
+    self.pdfPage.frame = frame;
+    self.contentSize = frame.size;
 }
 
-- (void)drawRect:(CGRect)rect
-{
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    
-    // PDF page drawing expects a Lower-Left coordinate system, so we flip the coordinate system before drawing.
-    CGContextScaleCTM(context, 1.0, -1.0);
-    
-    CGPDFDocumentRef pdfRef= [PdfManager getPdf:_fileNo];
-    if (pdfRef!=NULL)
-    {
-        
-        CGPDFPageRef pdfPage = CGPDFDocumentGetPage(pdfRef, _page);
-        
-        if (pdfPage != NULL) {
-            
-            CGContextSaveGState(context);
-            CGRect pageBounds;
-                pageBounds = CGRectMake(0,
-                                        -self.bounds.size.height,
-                                        self.bounds.size.width,
-                                        self.bounds.size.height);
-            
-            // Fill the background with white.
-            CGContextSetRGBFillColor(context, 1.0,1.0,1.0,1.0);
-            CGContextFillRect(context, pageBounds);
-            
-            CGAffineTransform pageTransform = CGPDFPageGetDrawingTransform(pdfPage, kCGPDFCropBox, pageBounds, 0, true);
-            CGContextConcatCTM(context, pageTransform);
-            
-            CGContextDrawPDFPage(context, pdfPage);
-            CGContextRestoreGState(context);
-            
-            RLog(@"drawpage %d", _page);
-        }
+-(void)setPage:(int)page {
+    self.pdfPage.page = page;
+}
 
-    }
+-(void)setFileNo:(int)fileNo {
+    self.pdfPage.fileNo = fileNo;
 }
 
 @end

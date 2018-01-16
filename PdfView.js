@@ -14,8 +14,6 @@ import PropTypes from 'prop-types';
 
 import PdfManager from './PdfManager';
 import PdfPageView from './PdfPageView';
-import DoubleTapView from './DoubleTapView';
-import PinchZoomView from './PinchZoomView';
 
 const MAX_SCALE = 3;
 const VIEWABILITYCONFIG = {minimumViewTime: 500, itemVisiblePercentThreshold: 10, waitForInteraction: false};
@@ -48,11 +46,12 @@ export default class PdfView extends Component {
         onScaleChanged: (scale)=>{},
     };
 
+    data = null
+
     constructor(props) {
 
         super(props);
         this.state = {
-            pdfLoaded: false,
             fileNo: -1,
             numberOfPages: 0,
             page: -1,
@@ -61,6 +60,7 @@ export default class PdfView extends Component {
             scale: 1,
             contentOffset: {x:0, y:0},
             scrollEnabled: true,
+            data: null
         };
 
         this.flatList = null;
@@ -76,10 +76,10 @@ export default class PdfView extends Component {
         PdfManager.loadFile(this.props.path, this.props.password)
             .then((pdfInfo) => {
                 this.setState({
-                    pdfLoaded: true,
                     fileNo: pdfInfo[0],
                     numberOfPages: pdfInfo[1],
-                    pageAspectRate: pdfInfo[3] === 0 ? 1 : pdfInfo[2] / pdfInfo[3]
+                    pageAspectRate: pdfInfo[3] === 0 ? 1 : pdfInfo[2] / pdfInfo[3],
+                    data: this._getData(pdfInfo[1])
                 });
                 if (this.props.onLoadComplete) this.props.onLoadComplete(pdfInfo[1], this.props.path);
             })
@@ -173,12 +173,6 @@ export default class PdfView extends Component {
 
     _onItemDoubleTap = (index) => {
 
-        if (this.state.scale >= MAX_SCALE) {
-            this._onScaleChanged(1 / this.state.scale);
-        } else {
-            this._onScaleChanged(1.2);
-        }
-
     };
 
     _onScaleChanged = (scale, center) => {
@@ -206,25 +200,6 @@ export default class PdfView extends Component {
 
     };
 
-    _renderItem = ({item, index}) => {
-
-        return (
-            <DoubleTapView style={{flexDirection: this.props.horizontal ? 'row' : 'column'}}
-                onSingleTap={()=>this._onItemSingleTap(index)}
-                onDoubleTap={()=>this._onItemDoubleTap(index)}
-            >
-                <PdfPageView
-                    key={item.id}
-                    fileNo={this.state.fileNo}
-                    page={item.key + 1}
-                    style={{width: this._getPageWidth(), height: this._getPageHeight()}}
-                />
-                {(index !== this.state.numberOfPages - 1) && this._renderSeparator()}
-            </DoubleTapView>
-        );
-
-    };
-
     _onViewableItemsChanged = (viewableInfo) => {
 
         if (viewableInfo.viewableItems.length > 0) {
@@ -235,14 +210,32 @@ export default class PdfView extends Component {
 
     };
 
-
-    _renderList = () => {
-
-        let data = [];
-        for (let i = 0; i < this.state.numberOfPages; i++) {
+    _getData = (numberOfPages) => {
+        let data = []
+        for (let i = 0; i < numberOfPages; i++) {
             data[i] = {key: i};
         }
 
+        return data
+    }
+
+
+    _renderItem = ({item, index}) => {
+        return item ? <View style={{flexDirection: this.props.horizontal ? 'row' : 'column'}}>
+            <PdfPageView
+                key={item.id}
+                fileNo={this.state.fileNo}
+                page={item.key + 1}
+                style={{width: this._getPageWidth(), height: this._getPageHeight()}}
+            />
+            {(index !== this.state.numberOfPages - 1) && this._renderSeparator()}
+        </View>
+        : null
+
+    };
+
+    _renderList = () => {
+        const {data} = this.state
         if (this.state.page !== this.props.page) {
             this.timer = setTimeout(() => {
                 if (this.flatList) {
@@ -251,7 +244,6 @@ export default class PdfView extends Component {
                 }
             }, 200);
         }
-
         return (
             <FlatList
                 ref={(ref) => {
@@ -283,12 +275,19 @@ export default class PdfView extends Component {
 
     };
 
+    _renderFirstItem = () => {
+      const {data} = this.state
+      return <View style={{flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center'}}>
+        {this._renderItem({item: data[0], index: 0})}
+      </View>
+    }
+
 
     render() {
-
+        const {data} = this.state
         return (
-            <PinchZoomView
-                style={{flex: 1}}
+            <View
+                style={{flex: 1, width: '100%'}}
                 onLayout={(event) => {
                     this.setState({
                         contentContainerSize: {
@@ -297,10 +296,9 @@ export default class PdfView extends Component {
                         }
                     });
                 }}
-                onScaleChanged={this._onScaleChanged}
             >
-                {this.state.pdfLoaded ? this._renderList() : (null)}
-            </PinchZoomView>
+                {data && data.length ? (data.length === 1 ? this._renderFirstItem() : this._renderList()) : null}
+            </View>
         );
 
     }

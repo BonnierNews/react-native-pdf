@@ -11,17 +11,31 @@
 #import "RCTPdfPageViewManager.h"
 #import "RCTPdfPageView.h"
 
+@interface RCTPdfPageViewManager () <UIScrollViewDelegate>
 
-@implementation RCTPdfPageViewManager
+@end@implementation RCTPdfPageViewManager
 
 RCT_EXPORT_MODULE()
 
 - (UIView *)view
 {
-  return [[RCTPdfPageView alloc] init];
+    RCTPdfPageView *pageView = [[RCTPdfPageView alloc] init];
+    pageView.delegate = self;
+    return pageView;
 }
 
 RCT_EXPORT_VIEW_PROPERTY(fileNo, int);
 RCT_EXPORT_VIEW_PROPERTY(page, int);
 
+-(UIView *) viewForZoomingInScrollView:(UIScrollView *)scrollView {
+    if ([scrollView isKindOfClass:RCTPdfPageView.class]) {
+        RCTPdfPageView *pdfPageView = (RCTPdfPageView *) scrollView;
+        return pdfPageView.pdfPage;
+    }
+    return nil;
+}
+
+-(void) scrollViewDidZoom:(UIScrollView *)scrollView {
+    NSLog(@"%f", scrollView.zoomScale);
+}
 @end

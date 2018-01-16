@@ -12,11 +12,12 @@
 #import "UIView+React.h"
 #endif
 
+#import "PdfPage.h"
 
-@interface RCTPdfPageView : UIView
+@interface RCTPdfPageView : UIScrollView
 
 @property(nonatomic) int fileNo;
 @property(nonatomic) int page;
-
+@property(nonatomic) PdfPage *pdfPage;
 
 @end
