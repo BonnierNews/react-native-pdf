@@ -18,8 +18,15 @@
 
 @property(nonatomic) int fileNo;
 @property(nonatomic) int page;
+@property(nonatomic) CGFloat maxZoom;
+@property(nonatomic) CGFloat minZoom;
+@property(nonatomic) BOOL allowZoom;
+
 @property(nonatomic) CGFloat myScale;
 @property(nonatomic) CGPDFPageRef pdfPage;
 @property(nonatomic) PDFScrollView *pdfScrollView;
+
+@property (nonatomic, copy) RCTBubblingEventBlock onPageSingleTap;
+@property (nonatomic, copy) RCTBubblingEventBlock onScaleChanged;
 
 @end

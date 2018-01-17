@@ -36,7 +36,7 @@
 // output log both debug and release
 #define RLog( s, ... ) NSLog( @"<%p %@:(%d)> %@", self, [[NSString stringWithUTF8String:__FILE__] lastPathComponent], __LINE__, [NSString stringWithFormat:(s), ##__VA_ARGS__] )
 
-@interface RCTPdfPageView ()
+@interface RCTPdfPageView () <PDFScrollViewDelegate>
 @end
 
 @implementation RCTPdfPageView {
@@ -48,27 +48,12 @@
     if (self) {
         
         self.pdfScrollView = [[PDFScrollView alloc] init];
+        self.pdfScrollView.pdfDelegate = self;
         [self addSubview:self.pdfScrollView];
-//        self.pdfPage = [[PdfPage alloc] initWithFrame:self.bounds];
-//        self.pdfPage.backgroundColor = UIColor.clearColor;
-//        [self addSubview:self.pdfPage];
     }
     
     return self;
 }
-
-//- (void)didSetProps:(NSArray<NSString *> *)changedProps
-//{
-//    long int count = [changedProps count];
-//    for (int i = 0 ; i < count; i++) {
-//
-//        if ([[changedProps objectAtIndex:i] isEqualToString:@"page"]) {
-//            [self setNeedsDisplay];
-//        }
-//
-//    }
-//    [self setNeedsDisplay];
-//}
 
 -(void)layoutSubviews {
     [super layoutSubviews];
@@ -79,6 +64,21 @@
 {
     [super reactSetFrame:frame];
     self.pdfScrollView.frame = frame;
+}
+
+-(void)setMinZoom:(CGFloat)minZoom {
+    _minZoom = minZoom;
+    self.pdfScrollView.minZoom = minZoom;
+}
+
+-(void)setMaxZoom:(CGFloat)maxZoom {
+    _maxZoom = maxZoom;
+    self.pdfScrollView.maxZoom = maxZoom;
+}
+
+-(void)setAllowZoom:(BOOL)allowZoom {
+    _allowZoom = allowZoom;
+    self.pdfScrollView.allowZoom = allowZoom;
 }
 
 -(void)setPage:(int)page {
@@ -113,6 +113,23 @@
     self.pdfScrollView.tiledPDFView.bounds = self.bounds;
     self.pdfScrollView.tiledPDFView.myScale = self.myScale;
     [self.pdfScrollView.tiledPDFView.layer setNeedsDisplay];
+}
+
+#pragma mark -
+#pragma mark PDFScrollView delegate methods
+- (void) pdfScrollViewTap:(CGPoint)touchPoint relativeTouchPoint:(CGPoint)relativeTouchPoint {
+    if (self.onPageSingleTap) {
+        self.onPageSingleTap(@{
+            @"point": @{@"x": [NSNumber numberWithDouble:touchPoint.x], @"y": [NSNumber numberWithDouble:touchPoint.y]},
+            @"relativePoint": @{@"x": [NSNumber numberWithDouble:relativeTouchPoint.x], @"y": [NSNumber numberWithDouble:touchPoint.y]}
+        });
+    }
+}
+
+- (void) pdfScrollViewScaleChange:(CGFloat)scale {
+    if (self.onScaleChanged) {
+        self.onScaleChanged(@{@"scale": [NSNumber numberWithDouble:scale]});
+    }
 }
 
 @end

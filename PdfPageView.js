@@ -33,7 +33,12 @@ export default class PdfPageView extends Component {
 PdfPageView.propTypes = {
     ...ViewPropTypes,
     fileNo: PropTypes.number,
-    page: PropTypes.number
+    page: PropTypes.number,
+    minZoom: PropTypes.number,
+    maxZoom: PropTypes.number,
+    allowZoom: PropTypes.bool,
+    onPageSingleTap: PropTypes.func,
+    onScaleChanged: PropTypes.func
 };
 
 let PdfPageViewCustom = requireNativeComponent('RCTPdfPageView', PdfPageView, {nativeOnly: {}});

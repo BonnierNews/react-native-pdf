@@ -47,11 +47,13 @@ export default class Pdf extends Component {
         activityIndicator: PropTypes.any,
         enableAntialiasing: PropTypes.bool,
         fitPolicy: PropTypes.number,
+        minZoom: PropTypes.number,
+        maxZoom: PropTypes.number,
         onLoadComplete: PropTypes.func,
         onPageChanged: PropTypes.func,
         onError: PropTypes.func,
         onPageSingleTap: PropTypes.func,
-        onScaleChanged: PropTypes.func,
+        onScaleChanged: PropTypes.func
     };
 
     static defaultProps = {
@@ -68,7 +70,7 @@ export default class Pdf extends Component {
         onPageSingleTap: (page)=>{},
         onScaleChanged: (scale)=>{},
     };
-    
+
     constructor(props) {
 
         super(props);
@@ -281,14 +283,14 @@ export default class Pdf extends Component {
         }
 
     };
-    
+
     _onError = (error) => {
 
         if (this.props.source && this.props.source.uri && this.props.source.cache===true) {
             const cacheFile = RNFetchBlob.fs.dirs.CacheDir + '/' + SHA1(this.props.source.uri) + '.pdf';
             RNFetchBlob.fs.unlink(cacheFile);
         }
-        
+
         this.props.onError && this.props.onError(error);
 
     }

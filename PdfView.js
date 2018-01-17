@@ -29,6 +29,9 @@ export default class PdfView extends Component {
         fitPolicy: PropTypes.number,
         horizontal: PropTypes.bool,
         page: PropTypes.number,
+        minZoom: PropTypes.number,
+        maxZoom: PropTypes.number,
+        allowZoom: PropTypes.bool,
         onPageSingleTap: PropTypes.func,
         onScaleChanged: PropTypes.func,
     };
@@ -42,7 +45,10 @@ export default class PdfView extends Component {
         fitPolicy: 0,
         horizontal: false,
         page: 1,
-        onPageSingleTap: (page)=>{},
+        minZoom: 1,
+        maxZoom: 4,
+        allowZoom: true,
+        onPageSingleTap: (event)=>{},
         onScaleChanged: (scale)=>{},
     };
 
@@ -227,6 +233,11 @@ export default class PdfView extends Component {
                 fileNo={this.state.fileNo}
                 page={item.key + 1}
                 style={{width: this._getPageWidth(), height: this._getPageHeight()}}
+                maxZoom={this.props.maxZoom}
+                minZoom={this.props.minZoom}
+                allowZoom={this.props.allowZoom}
+                onPageSingleTap={this.props.onPageSingleTap}
+                onScaleChanged={this.props.onScaleChanged}
             />
             {(index !== this.state.numberOfPages - 1) && this._renderSeparator()}
         </View>

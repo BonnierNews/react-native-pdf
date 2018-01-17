@@ -1,64 +1,14 @@
-/*
-     File: PDFScrollView.m
- Abstract: UIScrollView subclass that handles the user input to zoom the PDF page.  This class handles swapping the TiledPDFViews when the zoom level changes.
-  Version: 3.1
- 
- Disclaimer: IMPORTANT:  This Apple software is supplied to you by Apple
- Inc. ("Apple") in consideration of your agreement to the following
- terms, and your use, installation, modification or redistribution of
- this Apple software constitutes acceptance of these terms.  If you do
- not agree with these terms, please do not use, install, modify or
- redistribute this Apple software.
- 
- In consideration of your agreement to abide by the following terms, and
- subject to these terms, Apple grants you a personal, non-exclusive
- license, under Apple's copyrights in this original Apple software (the
- "Apple Software"), to use, reproduce, modify and redistribute the Apple
- Software, with or without modifications, in source and/or binary forms;
- provided that if you redistribute the Apple Software in its entirety and
- without modifications, you must retain this notice and the following
- text and disclaimers in all such redistributions of the Apple Software.
- Neither the name, trademarks, service marks or logos of Apple Inc. may
- be used to endorse or promote products derived from the Apple Software
- without specific prior written permission from Apple.  Except as
- expressly stated in this notice, no other rights or licenses, express or
- implied, are granted by Apple herein, including but not limited to any
- patent rights that may be infringed by your derivative works or by other
- works in which the Apple Software may be incorporated.
- 
- The Apple Software is provided by Apple on an "AS IS" basis.  APPLE
- MAKES NO WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION
- THE IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY AND FITNESS
- FOR A PARTICULAR PURPOSE, REGARDING THE APPLE SOFTWARE OR ITS USE AND
- OPERATION ALONE OR IN COMBINATION WITH YOUR PRODUCTS.
- 
- IN NO EVENT SHALL APPLE BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL
- OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- INTERRUPTION) ARISING IN ANY WAY OUT OF THE USE, REPRODUCTION,
- MODIFICATION AND/OR DISTRIBUTION OF THE APPLE SOFTWARE, HOWEVER CAUSED
- AND WHETHER UNDER THEORY OF CONTRACT, TORT (INCLUDING NEGLIGENCE),
- STRICT LIABILITY OR OTHERWISE, EVEN IF APPLE HAS BEEN ADVISED OF THE
- POSSIBILITY OF SUCH DAMAGE.
- 
- Copyright (C) 2014 Apple Inc. All Rights Reserved.
- 
- */
-
 #import "PDFScrollView.h"
 #import "TiledPDFView.h"
 #import <UIKit/UIKit.h>
 #import <QuartzCore/QuartzCore.h>
-
 
 @implementation PDFScrollView
 {
     CGPDFPageRef _PDFPage;
 }
 
-
 @synthesize backgroundImageView=_backgroundImageView, tiledPDFView=_tiledPDFView, oldTiledPDFView=_oldTiledPDFView;
-
 
 - (id)initWithCoder:(NSCoder *)coder
 {
@@ -80,8 +30,6 @@
     NSLog(@"%s",__PRETTY_FUNCTION__);
     self.decelerationRate = UIScrollViewDecelerationRateFast;
     self.delegate = self;
-    self.minimumZoomScale = 1;
-    self.maximumZoomScale = 5;
     self.runningScale = 1;
     self.contentMode = UIViewContentModeScaleAspectFit;
     self.autoresizingMask = UIViewAutoresizingFlexibleWidth;
@@ -119,6 +67,16 @@
     }
     // Create the TiledPDFView based on the size of the PDF page and scale it to fit the view.
     [self replaceTiledPDFViewWithFrame:self.pageRect];
+}
+
+- (void)setMaxZoom:(CGFloat)maxZoom {
+    _maxZoom = maxZoom;
+    self.maximumZoomScale = maxZoom;
+}
+
+- (void)setMinZoom:(CGFloat)minZoom {
+    _minZoom = minZoom;
+    self.minimumZoomScale = minZoom;
 }
 
 
@@ -175,17 +133,17 @@
 #pragma mark Gesture recognizers
 - (void) handleSingleTap: (UITapGestureRecognizer *)recognizer
 {
-    CGPoint touchPoint = [recognizer locationInView:self];
-    CGPoint touchPointInPdf = [self.tiledPDFView convertPoint:touchPoint toView:recognizer.view];
-    NSLog(@"%f", touchPointInPdf.x / [self.tiledPDFView frame].size.width);
-    NSLog(@"%f", touchPointInPdf.y / [self.tiledPDFView frame].size.height);
-    NSLog(@"%f", touchPointInPdf.x);
-    NSLog(@"%f", touchPointInPdf.y);
+    if (self.pdfDelegate != nil) {
+        CGPoint touchPoint = [recognizer locationInView:self];
+        CGPoint touchPointInPdf = [self.tiledPDFView convertPoint:touchPoint toView:recognizer.view];
+        CGPoint relativeTouchPoint = CGPointMake(touchPointInPdf.x / [self.tiledPDFView frame].size.width, touchPointInPdf.y / [self.tiledPDFView frame].size.height);
+        [self.pdfDelegate pdfScrollViewTap:touchPointInPdf relativeTouchPoint:relativeTouchPoint];
+    }
 }
 
 - (void) handleDoubleTap: (UITapGestureRecognizer *)recognizer
 {
-    float newScale = [self zoomScale] * 4.0;
+    float newScale = [self zoomScale] * self.maxZoom;
     
     if (self.zoomScale > self.minimumZoomScale)
     {
@@ -204,12 +162,12 @@
     CGRect zoomRect;
     
     zoomRect.size.height = [self.tiledPDFView frame].size.height / scale;
-    zoomRect.size.width  = [self.tiledPDFView frame].size.width  / scale;
+    zoomRect.size.width = [self.tiledPDFView frame].size.width  / scale;
     
     center = [self.tiledPDFView convertPoint:center fromView:self];
     
-    zoomRect.origin.x    = center.x - ((zoomRect.size.width / 2.0));
-    zoomRect.origin.y    = center.y - ((zoomRect.size.height / 2.0));
+    zoomRect.origin.x = center.x - ((zoomRect.size.width / 2.0));
+    zoomRect.origin.y = center.y - ((zoomRect.size.height / 2.0));
     
     return zoomRect;
 }
@@ -223,7 +181,7 @@
  */
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView
 {
-    return self.tiledPDFView;
+    return self.allowZoom ? self.tiledPDFView : nil;
 }
 
 /*
@@ -232,7 +190,6 @@
  */
 - (void)scrollViewWillBeginZooming:(UIScrollView *)scrollView withView:(UIView *)view
 {
-//    NSLog(@"%s scrollView.zoomScale=%f",__PRETTY_FUNCTION__,self.zoomScale);
     // Remove back tiled view.
     NSLog(@"%f", self.minimumZoomScale);
     NSLog(@"%f", self.maximumZoomScale);
@@ -240,7 +197,6 @@
     
     // Set the current TiledPDFView to be the old view.
     self.oldTiledPDFView = self.tiledPDFView;
-    //[self addSubview:self.oldTiledPDFView];
 }
 
 
@@ -249,17 +205,17 @@
  When the user stops zooming, create a new TiledPDFView based on the new zoom level and draw it on top of the old TiledPDFView.
  */
 - (void)scrollViewDidEndZooming:(UIScrollView *)scrollView withView:(UIView *)view atScale:(CGFloat)scale {
-    
-//    NSLog(@"BEFORE  %s scale=%f, _PDFScale=%f",__PRETTY_FUNCTION__,scale,_PDFScale);
     // Set the new scale factor for the TiledPDFView.
     _PDFScale *= scale;
     self.runningScale *= scale;
-    [self setMinimumZoomScale:1 / self.runningScale];
-    [self setMaximumZoomScale:5 / self.runningScale];
-//    NSLog(@"AFTER  %s scale=%f, _PDFScale=%f newFrame=%@",__PRETTY_FUNCTION__,scale,_PDFScale,NSStringFromCGRect(self.oldTiledPDFView.frame));
+    [self setMinimumZoomScale:self.minZoom / self.runningScale];
+    [self setMaximumZoomScale:self.maxZoom / self.runningScale];
 
     // Create a new tiled PDF View at the new scale
     [self replaceTiledPDFViewWithFrame:self.oldTiledPDFView.frame];
+    if (self.pdfDelegate != nil) {
+        [self.pdfDelegate pdfScrollViewScaleChange:self.runningScale];
+    }
 }
 
 -(void)replaceTiledPDFViewWithFrame:(CGRect)frame {
