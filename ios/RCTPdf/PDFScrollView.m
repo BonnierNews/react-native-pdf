@@ -47,6 +47,7 @@
 
 #import "PDFScrollView.h"
 #import "TiledPDFView.h"
+#import <UIKit/UIKit.h>
 #import <QuartzCore/QuartzCore.h>
 
 
@@ -81,10 +82,26 @@
     self.delegate = self;
     self.minimumZoomScale = 1;
     self.maximumZoomScale = 5;
-//    self.bounces = YES;
-//    self.bouncesZoom = YES;
+    self.runningScale = 1;
+    self.contentMode = UIViewContentModeScaleAspectFit;
+    self.autoresizingMask = UIViewAutoresizingFlexibleWidth;
+    
+    UITapGestureRecognizer *singleTap = [[UITapGestureRecognizer alloc]
+                                         initWithTarget:self
+                                         action:@selector(handleSingleTap:)];
+    singleTap.numberOfTapsRequired = 1;
+    singleTap.numberOfTouchesRequired = 1;
+    [self addGestureRecognizer:singleTap];
+    
+    UITapGestureRecognizer *doubleTap = [[UITapGestureRecognizer alloc]
+                                         initWithTarget:self
+                                         action:@selector(handleDoubleTap:)];
+    doubleTap.numberOfTapsRequired = 2;
+    doubleTap.numberOfTouchesRequired = 1;
+    [self addGestureRecognizer:doubleTap];
+    
+    [singleTap requireGestureRecognizerToFail:doubleTap];
 }
-
 
 - (void)setPDFPage:(CGPDFPageRef)PDFPage;
 {
@@ -154,6 +171,48 @@
 }
 
 
+#pragma mark -
+#pragma mark Gesture recognizers
+- (void) handleSingleTap: (UITapGestureRecognizer *)recognizer
+{
+    CGPoint touchPoint = [recognizer locationInView:self];
+    CGPoint touchPointInPdf = [self.tiledPDFView convertPoint:touchPoint toView:recognizer.view];
+    NSLog(@"%f", touchPointInPdf.x / [self.tiledPDFView frame].size.width);
+    NSLog(@"%f", touchPointInPdf.y / [self.tiledPDFView frame].size.height);
+    NSLog(@"%f", touchPointInPdf.x);
+    NSLog(@"%f", touchPointInPdf.y);
+}
+
+- (void) handleDoubleTap: (UITapGestureRecognizer *)recognizer
+{
+    float newScale = [self zoomScale] * 4.0;
+    
+    if (self.zoomScale > self.minimumZoomScale)
+    {
+        [self setZoomScale:self.minimumZoomScale animated:YES];
+    }
+    else
+    {
+        CGRect zoomRect = [self zoomRectForScale:newScale
+                                      withCenter:[recognizer locationInView:recognizer.view]];
+        [self zoomToRect:zoomRect animated:YES];
+    }
+}
+
+- (CGRect)zoomRectForScale:(float)scale withCenter:(CGPoint)center {
+    
+    CGRect zoomRect;
+    
+    zoomRect.size.height = [self.tiledPDFView frame].size.height / scale;
+    zoomRect.size.width  = [self.tiledPDFView frame].size.width  / scale;
+    
+    center = [self.tiledPDFView convertPoint:center fromView:self];
+    
+    zoomRect.origin.x    = center.x - ((zoomRect.size.width / 2.0));
+    zoomRect.origin.y    = center.y - ((zoomRect.size.height / 2.0));
+    
+    return zoomRect;
+}
 
 #pragma mark -
 #pragma mark UIScrollView delegate methods
@@ -176,6 +235,7 @@
 //    NSLog(@"%s scrollView.zoomScale=%f",__PRETTY_FUNCTION__,self.zoomScale);
     // Remove back tiled view.
     NSLog(@"%f", self.minimumZoomScale);
+    NSLog(@"%f", self.maximumZoomScale);
     [self.oldTiledPDFView removeFromSuperview];
     
     // Set the current TiledPDFView to be the old view.
@@ -193,17 +253,9 @@
 //    NSLog(@"BEFORE  %s scale=%f, _PDFScale=%f",__PRETTY_FUNCTION__,scale,_PDFScale);
     // Set the new scale factor for the TiledPDFView.
     _PDFScale *= scale;
-    NSLog(@"%f", scale);
-    if (scale > 1) {
-        [self setMinimumZoomScale:1 / scale];
-    } else {
-        [self setMinimumZoomScale:1];
-    }
-    if (scale < 5 && scale > 1) {
-        [self setMaximumZoomScale:scale];
-    } else {
-        [self setMaximumZoomScale:5];
-    }
+    self.runningScale *= scale;
+    [self setMinimumZoomScale:1 / self.runningScale];
+    [self setMaximumZoomScale:5 / self.runningScale];
 //    NSLog(@"AFTER  %s scale=%f, _PDFScale=%f newFrame=%@",__PRETTY_FUNCTION__,scale,_PDFScale,NSStringFromCGRect(self.oldTiledPDFView.frame));
 
     // Create a new tiled PDF View at the new scale

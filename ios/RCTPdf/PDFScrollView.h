@@ -63,6 +63,8 @@
 @property (nonatomic, weak) TiledPDFView *oldTiledPDFView;
 // Current PDF zoom scale.
 @property (nonatomic) CGFloat PDFScale;
+// Current running scroll view scale
+@property (nonatomic) CGFloat runningScale;
 
 - (void)setPDFPage:(CGPDFPageRef)PDFPage;
 -(void)replaceTiledPDFViewWithFrame:(CGRect)frame;
