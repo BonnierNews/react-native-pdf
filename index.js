@@ -49,6 +49,8 @@ export default class Pdf extends Component {
         fitPolicy: PropTypes.number,
         minZoom: PropTypes.number,
         maxZoom: PropTypes.number,
+        allowZoom: PropTypes.bool,
+        onLoadProgress: PropTypes.func,
         onLoadComplete: PropTypes.func,
         onPageChanged: PropTypes.func,
         onError: PropTypes.func,
@@ -63,12 +65,15 @@ export default class Pdf extends Component {
         fitPolicy: 2, //fit both
         horizontal: false,
         page: 1,
+        minZoom: 1,
+        maxZoom: 4,
+        allowZoom: true,
         onLoadProgress: (percent)=>{},
-        onLoadComplete: (numberOfPages,path)=>{},
-        onPageChanged: (page,numberOfPages)=>{},
-        onError: (error)=>{},
-        onPageSingleTap: (page)=>{},
-        onScaleChanged: (scale)=>{},
+        onLoadComplete: (event)=>{},
+        onPageChanged: (event)=>{},
+        onError: (event)=>{},
+        onPageSingleTap: (event)=>{},
+        onScaleChanged: (event)=>{},
     };
 
     constructor(props) {
@@ -264,25 +269,25 @@ export default class Pdf extends Component {
 
     };
 
-    _onChange = (event) => {
-
-        let message = event.nativeEvent.message.split('|');
-        //__DEV__ && console.log("onChange: " + message);
-        if (message.length > 0) {
-            if (message[0] === 'loadComplete') {
-                this.props.onLoadComplete && this.props.onLoadComplete(Number(message[1]), this.state.path);
-            } else if (message[0] === 'pageChanged') {
-                this.props.onPageChanged && this.props.onPageChanged(Number(message[1]), Number(message[2]));
-            } else if (message[0] === 'error') {
-                this._onError(message[1]);
-            } else if (message[0] === 'pageSingleTap') {
-                this.props.onPageSingleTap && this.props.onPageSingleTap(message[1]);
-            } else if (message[0] === 'scaleChanged') {
-                this.props.onScaleChanged && this.props.onScaleChanged(message[1]);
-            }
-        }
-
-    };
+    // _onChange = (event) => {
+    //
+    //     let message = event.nativeEvent.message.split('|');
+    //     //__DEV__ && console.log("onChange: " + message);
+    //     if (message.length > 0) {
+    //         if (message[0] === 'loadComplete') {
+    //             this.props.onLoadComplete && this.props.onLoadComplete(Number(message[1]), this.state.path);
+    //         } else if (message[0] === 'pageChanged') {
+    //             this.props.onPageChanged && this.props.onPageChanged(Number(message[1]), Number(message[2]));
+    //         } else if (message[0] === 'error') {
+    //             this._onError(message[1]);
+    //         } else if (message[0] === 'pageSingleTap') {
+    //             this.props.onPageSingleTap && this.props.onPageSingleTap(message[1]);
+    //         } else if (message[0] === 'scaleChanged') {
+    //             this.props.onScaleChanged && this.props.onScaleChanged(message[1]);
+    //         }
+    //     }
+    //
+    // };
 
     _onError = (error) => {
 
@@ -325,7 +330,11 @@ export default class Pdf extends Component {
                         {...this.props}
                         style={[{backgroundColor: '#EEE'}, this.props.style]}
                         path={this.state.path}
-                        onChange={this._onChange}
+                        onLoadComplete={this.props.onLoadComplete}
+                        onPageChanged={this.props.onPageChanged}
+                        onError={this._onError}
+                        onPageSingleTap={this.props.onPageSingleTap}
+                        onScaleChanged={this.props.onScaleChanged}
                     />
                 );
             } else if (Platform.OS === "ios") {
@@ -352,6 +361,6 @@ export default class Pdf extends Component {
 
 if (Platform.OS === "android") {
     var PdfCustom = requireNativeComponent('RCTPdf', Pdf, {
-        nativeOnly: {path: true, onChange: true},
+        nativeOnly: {path: true},
     })
 }

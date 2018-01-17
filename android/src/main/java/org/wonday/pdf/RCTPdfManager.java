@@ -9,6 +9,7 @@
 package org.wonday.pdf;
 
 import java.io.File;
+import java.util.Map;
 
 import android.content.Context;
 import android.view.ViewGroup;
@@ -95,6 +96,21 @@ public class RCTPdfManager extends SimpleViewManager<PdfView> {
         pdfView.setEnableAntialiasing(enableAntialiasing);
     }
 
+    @ReactProp(name = "maxZoom")
+    public void setMaxZoom(PdfView pdfView, float maxZoom) {
+        pdfView.setMaxZoomScale(maxZoom);
+    }
+
+    @ReactProp(name = "minZoom")
+    public void setMinZoom(PdfView pdfView, float minZoom) {
+        pdfView.setMinZoomScale(minZoom);
+    }
+
+    @ReactProp(name = "allowZoom")
+    public void setAllowZoom(PdfView pdfView, boolean allow) {
+        pdfView.allowZoom(allow);
+    }
+
     @ReactProp(name = "fitPolicy")
     public void setFitPolycy(PdfView pdfView, int fitPolicy) {
         pdfView.setFitPolicy(fitPolicy);
@@ -104,6 +120,37 @@ public class RCTPdfManager extends SimpleViewManager<PdfView> {
     public void onAfterUpdateTransaction(PdfView pdfView) {
         super.onAfterUpdateTransaction(pdfView);
         pdfView.drawPdf();
+    }
+
+    @Override
+    public Map getExportedCustomBubblingEventTypeConstants() {
+        return MapBuilder.builder()
+                .put(
+                        "tap",
+                        MapBuilder.of(
+                                "phasedRegistrationNames",
+                                MapBuilder.of("bubbled", "onPageSingleTap")))
+                .put(
+                        "error",
+                        MapBuilder.of(
+                                "phasedRegistrationNames",
+                                MapBuilder.of("bubbled", "onError")))
+                .put(
+                        "load",
+                        MapBuilder.of(
+                                "phasedRegistrationNames",
+                                MapBuilder.of("bubbled", "onLoadComplete")))
+                .put(
+                        "scale",
+                        MapBuilder.of(
+                                "phasedRegistrationNames",
+                                MapBuilder.of("bubbled", "onScaleChanged")))
+                .put(
+                        "pageChange",
+                        MapBuilder.of(
+                                "phasedRegistrationNames",
+                                MapBuilder.of("bubbled", "onPageChanged")))
+                .build();
     }
 
 }

@@ -18,6 +18,7 @@ import PdfPageView from './PdfPageView';
 const MAX_SCALE = 3;
 const VIEWABILITYCONFIG = {minimumViewTime: 500, itemVisiblePercentThreshold: 10, waitForInteraction: false};
 
+const fakeNativeEvent = nativeEvent => { return { nativeEvent } }
 export default class PdfView extends Component {
 
     static propTypes = {
@@ -87,10 +88,10 @@ export default class PdfView extends Component {
                     pageAspectRate: pdfInfo[3] === 0 ? 1 : pdfInfo[2] / pdfInfo[3],
                     data: this._getData(pdfInfo[1])
                 });
-                if (this.props.onLoadComplete) this.props.onLoadComplete(pdfInfo[1], this.props.path);
+                if (this.props.onLoadComplete) this.props.onLoadComplete(fakeNativeEvent({numberOfPages: pdfInfo[1]}));
             })
             .catch((error) => {
-                this.props.onError(error);
+                this.props.onError(fakeNativeEvent({error}));
             });
 
     }
@@ -210,7 +211,7 @@ export default class PdfView extends Component {
 
         if (viewableInfo.viewableItems.length > 0) {
             if (this.props.onPageChanged) {
-                this.props.onPageChanged(viewableInfo.viewableItems[0].index + 1, this.state.numberOfPages);
+                this.props.onPageChanged(fakeNativeEvent({page: viewableInfo.viewableItems[0].index + 1, numberOfPages: this.state.numberOfPages}));
             }
         }
 

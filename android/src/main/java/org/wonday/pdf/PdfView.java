@@ -62,9 +62,8 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
     private static PdfView instance = null;
     private boolean isMove = false;
 
-    private float lastPageWidth = 0;
-    private float lastPageHeight = 0;
-
+    private float minZoomScale;
+    private float maxZoomScale;
 
     public PdfView(ThemedReactContext context, AttributeSet set){
         super(context,set);
@@ -80,11 +79,12 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
         showLog(format("%s %s / %s", path, page, numberOfPages));
 
         WritableMap event = Arguments.createMap();
-        event.putString("message", "pageChanged|"+page+"|"+numberOfPages);
+        event.putInt("page", page);
+        event.putInt("numberOfPages", numberOfPages);
         ReactContext reactContext = (ReactContext)this.getContext();
         reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
             this.getId(),
-            "topChange",
+            "pageChange",
             event
          );
     }
@@ -95,11 +95,11 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
         this.zoomTo(this.scale);
 
         WritableMap event = Arguments.createMap();
-        event.putString("message", "loadComplete|"+numberOfPages);
+        event.putInt("numberOfPages", numberOfPages);
         ReactContext reactContext = (ReactContext)this.getContext();
         reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
             this.getId(),
-            "topChange",
+            "load",
             event
          );
     }
@@ -107,56 +107,55 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
     @Override
     public void onError(Throwable t){
         WritableMap event = Arguments.createMap();
-        if (t.getMessage().contains("Password required or incorrect password")) {
-            event.putString("message", "error|Password required or incorrect password.");
-        } else {
-            event.putString("message", "error|"+t.getMessage());
-        }
+        event.putString("error", t.getMessage());
 
         ReactContext reactContext = (ReactContext)this.getContext();
         reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
             this.getId(),
-            "topChange",
+            "error",
             event
          );
     }
 
     @Override
     public boolean onTap(MotionEvent e){
+        float xPositionInRealScale = this.toRealScale(this.getCurrentXOffset() + e.getX());
+        float yPositionInRealScale = this.toRealScale(this.getCurrentYOffset() + e.getY());
 
+        float xPositionRelativeToPage = xPositionInRealScale / this.getPageSize(0).getWidth();
+        float yPositionRelativeToPage = yPositionInRealScale / this.getPageSize(0).getHeight();
+
+        WritableMap point = Arguments.createMap();
+        point.putDouble("x", xPositionInRealScale);
+        point.putDouble("y", yPositionInRealScale);
+        WritableMap relativePoint = Arguments.createMap();
+        relativePoint.putDouble("x", xPositionRelativeToPage);
+        relativePoint.putDouble("y", yPositionRelativeToPage);
         WritableMap event = Arguments.createMap();
-        event.putString("message", "pageSingleTap|"+page);
+        event.putMap("point", point);
+        event.putMap("relativePoint", relativePoint);
 
         ReactContext reactContext = (ReactContext)this.getContext();
         reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
             this.getId(),
-            "topChange",
+            "tap",
             event
-         );
-
-        // process as tap
-         return true;
-
+        );
+        return true;
     }
 
     @Override
     public void onLayerDrawn(Canvas canvas, float pageWidth, float pageHeight, int displayedPage){
 
-        if (lastPageWidth>0 && lastPageHeight>0 && (pageWidth!=lastPageWidth || pageHeight!=lastPageHeight)) {
-            WritableMap event = Arguments.createMap();
-            event.putString("message", "scaleChanged|"+(pageWidth/lastPageWidth));
+        WritableMap event = Arguments.createMap();
+        event.putDouble("scale", this.getZoom());
 
-            ReactContext reactContext = (ReactContext)this.getContext();
-            reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
+        ReactContext reactContext = (ReactContext)this.getContext();
+        reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(
                 this.getId(),
-                "topChange",
+                "scale",
                 event
-             );
-        }
-
-        lastPageWidth = pageWidth;
-        lastPageHeight = pageHeight;
-
+        );
     }
 
 
@@ -167,8 +166,6 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
             File pdfFile = new File(this.path);
             this.fromFile(pdfFile)
                 .defaultPage(this.page-1)
-                //.showMinimap(false)
-                //.enableSwipe(true)
                 .swipeHorizontal(this.horizontal)
                 .onPageChange(this)
                 .onLoad(this)
@@ -179,16 +176,6 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
                 .password(this.password)
                 .enableAntialiasing(this.enableAntialiasing)
                 .pageFitPolicy(this.fitPolicy)
-/*
-                .onRender(new OnRenderListener() {
-                                @Override
-                                public void onInitiallyRendered(int nbPages, float pageWidth, float pageHeight) {
-                                    if (fitWidth) {
-                                        instance.fitToWidth(page-1);
-                                    }
-                                }
-                            })
-*/
                 .load();
 
 
@@ -240,6 +227,37 @@ public class PdfView extends PDFView implements OnPageChangeListener,OnLoadCompl
             }
         }
 
+    }
+
+    @Override
+    public void setMinZoom(float minZoom) {
+        Log.d("Setminzoomhej", Float.toString(minZoom));
+    }
+
+    @Override
+    public void setMaxZoom(float maxZoom) {
+        Log.d("Setmaxzoomhej", Float.toString(maxZoom));
+    }
+
+    public void setMinZoomScale(float scale) {
+        this.minZoomScale = scale;
+        this.setMinZoom(scale);
+    }
+
+    public void setMaxZoomScale(float scale) {
+        this.maxZoomScale = scale;
+        this.setMaxZoom(scale);
+    }
+
+    public void allowZoom(boolean allow) {
+        if (allow) {
+            this.setMinZoomScale(this.minZoomScale);
+            this.setMaxZoomScale(this.maxZoomScale);
+        } else {
+            this.setMinZoomScale(this.minZoomScale);
+            this.setMaxZoomScale(this.minZoomScale);
+            this.zoomTo(this.minZoomScale);
+        }
     }
 
     private void showLog(final String str) {
