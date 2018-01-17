@@ -121,7 +121,7 @@
     if (self.onPageSingleTap) {
         self.onPageSingleTap(@{
             @"point": @{@"x": [NSNumber numberWithDouble:touchPoint.x], @"y": [NSNumber numberWithDouble:touchPoint.y]},
-            @"relativePoint": @{@"x": [NSNumber numberWithDouble:relativeTouchPoint.x], @"y": [NSNumber numberWithDouble:touchPoint.y]}
+            @"relativePoint": @{@"x": [NSNumber numberWithDouble:relativeTouchPoint.x], @"y": [NSNumber numberWithDouble:relativeTouchPoint.y]}
         });
     }
 }
