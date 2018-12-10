@@ -45,12 +45,12 @@ android_library(
 
 android_build_config(
     name = "build_config",
-    package = "com.rnppdfexample",
+    package = "com.rnpdfexample",
 )
 
 android_resource(
     name = "res",
-    package = "com.rnppdfexample",
+    package = "com.rnpdfexample",
     res = "src/main/res",
 )
 

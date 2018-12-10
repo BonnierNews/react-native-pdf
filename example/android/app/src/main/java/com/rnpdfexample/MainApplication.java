@@ -1,4 +1,4 @@
-package com.rnppdfexample;
+package com.rnpdfexample;
 
 import android.app.Application;
 
